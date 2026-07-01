@@ -108,7 +108,6 @@ def check_and_download_models():
         print("[MuseTalk] Downloading DWPose weights...")
         try:
             hf_hub_download(repo_id="yzd-v/DWPose", filename="dw-ll_ucoco_384.pth", local_dir=str(WORKSPACE / "models" / "dwpose"))
-            hf_hub_download(repo_id="yzd-v/DWPose", filename="rtmdet_m_8xb64_coco-lvis.pth", local_dir=str(WORKSPACE / "models" / "dwpose"))
         except Exception as e:
             print(f"[MuseTalk] Error downloading DWPose: {e}")
 

@@ -52,7 +52,6 @@ os.makedirs('./models/whisper', exist_ok=True); \
 hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/unet.pth', local_dir='./models'); \
 hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/musetalk.json', local_dir='./models'); \
 hf_hub_download(repo_id='yzd-v/DWPose', filename='dw-ll_ucoco_384.pth', local_dir='./models/dwpose'); \
-hf_hub_download(repo_id='yzd-v/DWPose', filename='rtmdet_m_8xb64_coco-lvis.pth', local_dir='./models/dwpose'); \
 hf_hub_download(repo_id='ManyOtherFunctions/face-parse-bisent', filename='79999_iter.pth', local_dir='./models/face-parse-bisent'); \
 hf_hub_download(repo_id='ManyOtherFunctions/face-parse-bisent', filename='resnet18-5c106cde.pth', local_dir='./models/face-parse-bisent'); \
 snapshot_download(repo_id='stabilityai/sd-vae-ft-mse', local_dir='./models/sd-vae'); \
