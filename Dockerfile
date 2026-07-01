@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 
 # Install OpenMMLab packages for MuseTalk (MMPose dependency)
 RUN pip install --no-cache-dir mmengine && \
-    pip install --no-cache-dir --no-build-isolation mmcv==2.0.1 -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.1/index.html && \
+    pip install --no-cache-dir --no-build-isolation mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.1/index.html && \
     pip install --no-cache-dir --no-build-isolation mmdet==3.1.0 && \
     pip install --no-cache-dir --no-build-isolation mmpose==1.1.0
 
