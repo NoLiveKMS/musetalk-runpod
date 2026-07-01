@@ -191,7 +191,10 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
                     "python", str(inference_script),
                     "--inference_config", str(config_path),
                     "--result_dir", str(Path(output_path).parent),
-                    "--bbox_shift", str(bbox_shift)
+                    "--bbox_shift", str(bbox_shift),
+                    "--unet_config", "models/musetalkV15/musetalk.json",
+                    "--unet_model_path", "models/musetalkV15/unet.pth",
+                    "--version", "v15"
                 ]
 
                 print(f"[MuseTalk] Running: {' '.join(cmd)}")
