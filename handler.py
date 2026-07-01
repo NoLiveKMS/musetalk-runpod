@@ -117,8 +117,8 @@ def check_and_download_models():
     if not face_parse_checkpoint.exists():
         print("[MuseTalk] Downloading Face Parsing weights...")
         try:
-            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="face-parse-bisent/79999_iter.pth", local_dir=str(WORKSPACE / "models"))
-            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="face-parse-bisent/resnet18-5c106cde.pth", local_dir=str(WORKSPACE / "models"))
+            hf_hub_download(repo_id="ManyOtherFunctions/face-parse-bisent", filename="79999_iter.pth", local_dir=str(WORKSPACE / "models" / "face-parse-bisent"))
+            hf_hub_download(repo_id="ManyOtherFunctions/face-parse-bisent", filename="resnet18-5c106cde.pth", local_dir=str(WORKSPACE / "models" / "face-parse-bisent"))
         except Exception as e:
             print(f"[MuseTalk] Error downloading Face Parsing weights: {e}")
 
@@ -132,11 +132,11 @@ def check_and_download_models():
             print(f"[MuseTalk] Error downloading SD VAE: {e}")
 
     # 5. Whisper weights
-    whisper_checkpoint = WORKSPACE / "models" / "whisper" / "tiny.pt"
+    whisper_checkpoint = WORKSPACE / "models" / "whisper" / "pytorch_model.bin"
     if not whisper_checkpoint.exists():
         print("[MuseTalk] Downloading Whisper weights...")
         try:
-            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="whisper/tiny.pt", local_dir=str(WORKSPACE / "models"))
+            snapshot_download(repo_id="openai/whisper-tiny", local_dir=str(WORKSPACE / "models" / "whisper"))
         except Exception as e:
             print(f"[MuseTalk] Error downloading Whisper: {e}")
 

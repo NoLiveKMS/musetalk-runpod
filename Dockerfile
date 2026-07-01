@@ -44,7 +44,6 @@ RUN pip install --no-cache-dir mmengine && \
 RUN python3 -c " \
 from huggingface_hub import hf_hub_download, snapshot_download; \
 import os; \
-os.makedirs('./models/musetalk', exist_ok=True); \
 os.makedirs('./models/musetalkV15', exist_ok=True); \
 os.makedirs('./models/dwpose', exist_ok=True); \
 os.makedirs('./models/face-parse-bisent', exist_ok=True); \
@@ -54,12 +53,10 @@ hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/unet.pth', 
 hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/musetalk.json', local_dir='./models'); \
 hf_hub_download(repo_id='yzd-v/DWPose', filename='dw-ll_ucoco_384.pth', local_dir='./models/dwpose'); \
 hf_hub_download(repo_id='yzd-v/DWPose', filename='rtmdet_m_8xb64_coco-lvis.pth', local_dir='./models/dwpose'); \
-hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='face-parse-bisent/79999_iter.pth', local_dir='./models'); \
-hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='face-parse-bisent/resnet18-5c106cde.pth', local_dir='./models'); \
+hf_hub_download(repo_id='ManyOtherFunctions/face-parse-bisent', filename='79999_iter.pth', local_dir='./models/face-parse-bisent'); \
+hf_hub_download(repo_id='ManyOtherFunctions/face-parse-bisent', filename='resnet18-5c106cde.pth', local_dir='./models/face-parse-bisent'); \
 snapshot_download(repo_id='stabilityai/sd-vae-ft-mse', local_dir='./models/sd-vae'); \
-hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='whisper/tiny.pt', local_dir='./models'); \
-from transformers import AutoFeatureExtractor; \
-AutoFeatureExtractor.from_pretrained('openai/whisper-tiny'); \
+snapshot_download(repo_id='openai/whisper-tiny', local_dir='./models/whisper'); \
 " || echo "Model download failed during build, fallback will handle it"
 
 # Pre-download face-detection s3fd checkpoint to prevent runtime download latency
