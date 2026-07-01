@@ -84,16 +84,18 @@ def upload_to_s3(file_path, bucket_name, object_name):
     except Exception as e:
         return None, f"S3 upload failed: {str(e)}"
 
-def generate_video_musetalk(image_path, audio_path, output_path):
+def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, is_video=True):
     """
-    Generate talking head video using MuseTalk
-    This is a simplified implementation - for production, implement full MuseTalk pipeline
+    Generate talking head video using MuseTalk.
+    Supports both video-to-video and image-to-video lip sync.
     """
     try:
         print(f"[MuseTalk] Generating video...")
-        print(f"  Image: {image_path}")
+        print(f"  Input path: {video_path}")
         print(f"  Audio: {audio_path}")
         print(f"  Output: {output_path}")
+        print(f"  Bbox Shift: {bbox_shift}")
+        print(f"  Is Video: {is_video}")
 
         # Check if models exist
         if not MODEL_DIR.exists():
@@ -107,21 +109,32 @@ def generate_video_musetalk(image_path, audio_path, output_path):
             # Add MuseTalk to path
             sys.path.insert(0, str(WORKSPACE))
 
-            # This is where you'd implement the full MuseTalk inference
-            # For now, using a placeholder that calls the inference script
-
             # Check if inference script exists
             inference_script = WORKSPACE / "scripts" / "inference.py"
 
             if inference_script.exists():
+                # MuseTalk's inference.py reads task configuration from a YAML config file.
+                # Generate a temporary config.yaml
+                temp_dir = os.path.dirname(video_path)
+                config_path = os.path.join(temp_dir, "config.yaml")
+                
+                # Write simple YAML file without external dependencies
+                config_content = f"""task_0:
+  video_path: "{video_path}"
+  audio_path: "{audio_path}"
+  bbox_shift: {bbox_shift}
+"""
+                with open(config_path, "w") as f:
+                    f.write(config_content)
+                
+                print(f"[MuseTalk] Generated config.yaml at {config_path}")
+
                 # Call MuseTalk inference
                 cmd = [
                     "python", str(inference_script),
-                    "--source_image", str(image_path),
-                    "--driven_audio", str(audio_path),
+                    "--inference_config", str(config_path),
                     "--result_dir", str(Path(output_path).parent),
-                    "--fps", "25",
-                    "--batch_size", "8"
+                    "--bbox_shift", str(bbox_shift)
                 ]
 
                 print(f"[MuseTalk] Running: {' '.join(cmd)}")
@@ -131,37 +144,51 @@ def generate_video_musetalk(image_path, audio_path, output_path):
                     print(f"[MuseTalk] Stderr: {result.stderr}")
                     return None, f"MuseTalk inference failed: {result.stderr}"
 
-                # Find generated video
+                # Find generated video recursively in the output directory
                 result_dir = Path(output_path).parent
-                videos = list(result_dir.glob("*.mp4"))
+                videos = list(result_dir.glob("**/*.mp4"))
 
                 if not videos:
                     return None, "No output video generated"
 
-                # Move to expected output path
+                # Move the first found video to expected output path
                 shutil.move(str(videos[0]), str(output_path))
                 print(f"[MuseTalk] Video generated: {output_path}")
 
                 return str(output_path), None
 
             else:
-                # Fallback: Create a simple test video (for testing Docker build)
+                # Fallback: Create a simple test video using ffmpeg
                 print("[MuseTalk] WARNING: Inference script not found, creating test video")
 
-                # Create a simple test video using ffmpeg
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-loop", "1",
-                    "-i", str(image_path),
-                    "-i", str(audio_path),
-                    "-c:v", "libx264",
-                    "-tune", "stillimage",
-                    "-c:a", "aac",
-                    "-b:a", "192k",
-                    "-pix_fmt", "yuv420p",
-                    "-shortest",
-                    str(output_path)
-                ]
+                if is_video:
+                    # Merge video and audio
+                    cmd = [
+                        "ffmpeg", "-y",
+                        "-i", str(video_path),
+                        "-i", str(audio_path),
+                        "-c:v", "copy",
+                        "-c:a", "aac",
+                        "-map", "0:v:0",
+                        "-map", "1:a:0",
+                        "-shortest",
+                        str(output_path)
+                    ]
+                else:
+                    # Loop image still image
+                    cmd = [
+                        "ffmpeg", "-y",
+                        "-loop", "1",
+                        "-i", str(video_path),
+                        "-i", str(audio_path),
+                        "-c:v", "libx264",
+                        "-tune", "stillimage",
+                        "-c:a", "aac",
+                        "-b:a", "192k",
+                        "-pix_fmt", "yuv420p",
+                        "-shortest",
+                        str(output_path)
+                    ]
 
                 result = subprocess.run(cmd, capture_output=True, timeout=60)
 
@@ -189,33 +216,46 @@ def handler(job):
 
         print(f"[MuseTalk] Processing job: {job_id}")
 
-        # Validate inputs - return error dict instead of sys.exit()
-        image_url = job_input.get('input_image_url')
-        if not image_url:
-            print("[MuseTalk] ERROR: Missing input_image_url")
-            return {"error": "input_image_url is required"}
+        # Validate inputs - support input_video_url, fall back to input_image_url
+        video_url = job_input.get('input_video_url') or job_input.get('input_image_url')
+        if not video_url:
+            print("[MuseTalk] ERROR: Missing input_video_url or input_image_url")
+            return {"error": "input_video_url or input_image_url is required"}
 
         audio_url = job_input.get('input_audio_url')
         if not audio_url:
             print("[MuseTalk] ERROR: Missing input_audio_url")
             return {"error": "input_audio_url is required"}
 
+        # Optional bbox_shift parameter for controlling mouth openness
+        bbox_shift = job_input.get('bbox_shift', 0)
+        try:
+            bbox_shift = int(bbox_shift)
+        except (ValueError, TypeError):
+            bbox_shift = 0
+
         # Create temp directory
         temp_dir = tempfile.mkdtemp(prefix="musetalk_")
         print(f"[MuseTalk] Temp dir: {temp_dir}")
 
         try:
-            # Download inputs
-            image_path = os.path.join(temp_dir, "input.png")
-            downloaded_image, error = download_file(image_url, image_path)
+            # Check if input is a video or image based on key name or file extension
+            is_video = True
+            if 'input_image_url' in job_input and 'input_video_url' not in job_input:
+                is_video = False
 
+            # Set correct extension
+            input_ext = ".mp4" if is_video else ".png"
+            input_path = os.path.join(temp_dir, f"input{input_ext}")
+            
+            # Download inputs
+            downloaded_input, error = download_file(video_url, input_path)
             if error:
                 print(f"[MuseTalk] ERROR: {error}")
-                return {"error": f"Failed to download image: {error}"}
+                return {"error": f"Failed to download input: {error}"}
 
             audio_path = os.path.join(temp_dir, "input.wav")
             downloaded_audio, error = download_file(audio_url, audio_path)
-
             if error:
                 print(f"[MuseTalk] ERROR: {error}")
                 return {"error": f"Failed to download audio: {error}"}
@@ -223,9 +263,11 @@ def handler(job):
             # Generate video
             output_path = os.path.join(temp_dir, "output.mp4")
             video_path, error = generate_video_musetalk(
-                downloaded_image,
+                downloaded_input,
                 downloaded_audio,
-                output_path
+                output_path,
+                bbox_shift=bbox_shift,
+                is_video=is_video
             )
 
             if error:
