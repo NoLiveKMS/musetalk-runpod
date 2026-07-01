@@ -197,7 +197,7 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
                 ]
 
                 print(f"[MuseTalk] Running: {' '.join(cmd)}")
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=str(WORKSPACE))
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, cwd=str(WORKSPACE))
 
                 if result.returncode != 0:
                     print(f"[MuseTalk] Stderr: {result.stderr}")
@@ -260,7 +260,7 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
             return None, f"MuseTalk import failed: {str(e)}"
 
     except subprocess.TimeoutExpired:
-        return None, "Video generation timeout (>5 minutes)"
+        return None, "Video generation timeout (>30 minutes)"
     except Exception as e:
         return None, f"Video generation error: {str(e)}"
 
