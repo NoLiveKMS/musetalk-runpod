@@ -203,9 +203,9 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
                     print(f"[MuseTalk] Stderr: {result.stderr}")
                     return None, f"MuseTalk inference failed: {result.stderr}"
 
-                # Find generated video recursively in the output directory
+                # Find generated video recursively in the output directory, excluding the input video file itself
                 result_dir = Path(output_path).parent
-                videos = list(result_dir.glob("**/*.mp4"))
+                videos = [v for v in result_dir.glob("**/*.mp4") if v.name != "input.mp4"]
 
                 if not videos:
                     return None, "No output video generated"
