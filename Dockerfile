@@ -42,7 +42,7 @@ RUN pip install --no-cache-dir mmengine && \
 
 # Download model weights from HuggingFace
 RUN python3 -c "from huggingface_hub import snapshot_download; \
-    snapshot_download(repo_id='TMElyralab/MuseTalk', local_dir='./models/musetalk', local_dir_use_symlinks=False)" || \
+    snapshot_download(repo_id='TMElyralab/MuseTalk', local_dir='./models', local_dir_use_symlinks=False)" || \
     echo "Model download will happen at runtime"
 
 # Copy handler
