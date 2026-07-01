@@ -87,7 +87,7 @@ def upload_to_s3(file_path, bucket_name, object_name):
 def check_and_download_models():
     """Ensure all required models are downloaded and in the correct folder structure"""
     # Create directories if they don't exist
-    for folder in ["musetalk", "musetalkV15", "dwpose", "face-parse-bisent", "sd-vae-ft-mse", "whisper"]:
+    for folder in ["musetalk", "musetalkV15", "dwpose", "face-parse-bisent", "sd-vae", "whisper"]:
         os.makedirs(WORKSPACE / "models" / folder, exist_ok=True)
 
     from huggingface_hub import hf_hub_download, snapshot_download
@@ -123,11 +123,11 @@ def check_and_download_models():
             print(f"[MuseTalk] Error downloading Face Parsing weights: {e}")
 
     # 4. SD VAE weights
-    vae_checkpoint = WORKSPACE / "models" / "sd-vae-ft-mse" / "diffusion_pytorch_model.bin"
+    vae_checkpoint = WORKSPACE / "models" / "sd-vae" / "diffusion_pytorch_model.bin"
     if not vae_checkpoint.exists():
         print("[MuseTalk] Downloading SD VAE weights...")
         try:
-            snapshot_download(repo_id="stabilityai/sd-vae-ft-mse", local_dir=str(WORKSPACE / "models" / "sd-vae-ft-mse"))
+            snapshot_download(repo_id="stabilityai/sd-vae-ft-mse", local_dir=str(WORKSPACE / "models" / "sd-vae"))
         except Exception as e:
             print(f"[MuseTalk] Error downloading SD VAE: {e}")
 
