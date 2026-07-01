@@ -33,9 +33,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir runpod boto3 requests huggingface_hub
 
-# Install mmpose last (if MuseTalk actually needs it, it will be imported at runtime)
-# We'll handle the ImportError gracefully in the handler
-RUN pip install --no-cache-dir mmpose || echo "mmpose install skipped - will handle in code if needed"
+# Install OpenMMLab packages for MuseTalk (MMPose dependency)
+RUN pip install --no-cache-dir openmim && \
+    mim install mmengine "mmcv==2.0.1" "mmdet==3.1.0" "mmpose==1.1.0"
 
 # Download model weights from HuggingFace
 RUN python3 -c "from huggingface_hub import snapshot_download; \
