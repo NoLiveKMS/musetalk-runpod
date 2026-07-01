@@ -40,10 +40,32 @@ RUN pip install --no-cache-dir mmengine && \
     pip install --no-cache-dir mmdet>=3.2.0 && \
     pip install --no-cache-dir mmpose>=1.2.0
 
-# Download model weights from HuggingFace
-RUN python3 -c "from huggingface_hub import snapshot_download; \
-    snapshot_download(repo_id='TMElyralab/MuseTalk', local_dir='./models', local_dir_use_symlinks=False)" || \
-    echo "Model download will happen at runtime"
+# Download model weights from HuggingFace and cache other model dependencies during build
+RUN python3 -c " \
+from huggingface_hub import hf_hub_download, snapshot_download; \
+import os; \
+os.makedirs('./models/musetalk', exist_ok=True); \
+os.makedirs('./models/musetalkV15', exist_ok=True); \
+os.makedirs('./models/dwpose', exist_ok=True); \
+os.makedirs('./models/face-parse-bisent', exist_ok=True); \
+os.makedirs('./models/sd-vae', exist_ok=True); \
+os.makedirs('./models/whisper', exist_ok=True); \
+hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/unet.pth', local_dir='./models'); \
+hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='musetalkV15/musetalk.json', local_dir='./models'); \
+hf_hub_download(repo_id='yzd-v/DWPose', filename='dw-ll_ucoco_384.pth', local_dir='./models/dwpose'); \
+hf_hub_download(repo_id='yzd-v/DWPose', filename='rtmdet_m_8xb64_coco-lvis.pth', local_dir='./models/dwpose'); \
+hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='face-parse-bisent/79999_iter.pth', local_dir='./models'); \
+hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='face-parse-bisent/resnet18-5c106cde.pth', local_dir='./models'); \
+snapshot_download(repo_id='stabilityai/sd-vae-ft-mse', local_dir='./models/sd-vae'); \
+hf_hub_download(repo_id='TMElyralab/MuseTalk', filename='whisper/tiny.pt', local_dir='./models'); \
+from transformers import AutoFeatureExtractor; \
+AutoFeatureExtractor.from_pretrained('openai/whisper-tiny'); \
+" || echo "Model download failed during build, fallback will handle it"
+
+# Pre-download face-detection s3fd checkpoint to prevent runtime download latency
+RUN mkdir -p /root/.cache/torch/hub/checkpoints && \
+    wget -q https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth -O /root/.cache/torch/hub/checkpoints/s3fd-619a316812.pth || \
+    echo "S3FD checkpoint download failed"
 
 # Copy handler
 COPY handler.py /workspace/MuseTalk/handler.py

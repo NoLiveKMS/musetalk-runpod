@@ -300,6 +300,11 @@ def handler(job):
             is_video = True
             if 'input_image_url' in job_input and 'input_video_url' not in job_input:
                 is_video = False
+            else:
+                # Check file extension of the URL
+                lower_url = video_url.lower().split('?')[0]
+                if any(lower_url.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.bmp', '.webp']):
+                    is_video = False
 
             # Set correct extension
             input_ext = ".mp4" if is_video else ".png"
@@ -338,8 +343,19 @@ def handler(job):
             video_url, error = upload_to_s3(video_path, bucket, object_name)
 
             if error:
-                print(f"[MuseTalk] ERROR: {error}")
-                return {"error": error}
+                print(f"[MuseTalk] S3 upload failed/not configured: {error}. Falling back to returning base64 encoded video.")
+                import base64
+                try:
+                    with open(video_path, "rb") as video_file:
+                        encoded_string = base64.b64encode(video_file.read()).decode('utf-8')
+                    return {
+                        "output_video_base64": encoded_string,
+                        "status": "completed",
+                        "model": "musetalk",
+                        "job_id": job_id
+                    }
+                except Exception as b64_err:
+                    return {"error": f"S3 upload failed: {error} and Base64 conversion failed: {str(b64_err)}"}
 
             print(f"[MuseTalk] ✅ Success: {video_url}")
 
