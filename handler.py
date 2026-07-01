@@ -84,6 +84,22 @@ def upload_to_s3(file_path, bucket_name, object_name):
     except Exception as e:
         return None, f"S3 upload failed: {str(e)}"
 
+def check_and_download_models():
+    """Ensure all required models are downloaded and in the correct folder"""
+    required_file = WORKSPACE / "models" / "dwpose" / "dw-ll_ucoco_384.pth"
+    if not required_file.exists():
+        print(f"[MuseTalk] Models not found at {required_file.parent}. Downloading from HuggingFace...")
+        try:
+            from huggingface_hub import snapshot_download
+            snapshot_download(
+                repo_id='TMElyralab/MuseTalk',
+                local_dir=str(WORKSPACE / "models"),
+                local_dir_use_symlinks=False
+            )
+            print("[MuseTalk] Download completed successfully!")
+        except Exception as e:
+            print(f"[MuseTalk] Error downloading models: {e}")
+
 def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, is_video=True):
     """
     Generate talking head video using MuseTalk.
@@ -97,9 +113,10 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
         print(f"  Bbox Shift: {bbox_shift}")
         print(f"  Is Video: {is_video}")
 
-        # Check if models exist
-        if not MODEL_DIR.exists():
-            return None, "MuseTalk models not found - run model download first"
+        # Ensure models exist (download if missing)
+        check_and_download_models()
+        if not (WORKSPACE / "models" / "dwpose").exists():
+            return None, "MuseTalk models not found - dwpose directory missing"
 
         # Import MuseTalk components
         try:
@@ -138,7 +155,7 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
                 ]
 
                 print(f"[MuseTalk] Running: {' '.join(cmd)}")
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=str(WORKSPACE))
 
                 if result.returncode != 0:
                     print(f"[MuseTalk] Stderr: {result.stderr}")
@@ -190,7 +207,7 @@ def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, i
                         str(output_path)
                     ]
 
-                result = subprocess.run(cmd, capture_output=True, timeout=60)
+                result = subprocess.run(cmd, capture_output=True, timeout=60, cwd=str(WORKSPACE))
 
                 if result.returncode != 0:
                     return None, f"FFmpeg test video failed: {result.stderr.decode()}"
@@ -313,6 +330,12 @@ if __name__ == "__main__":
     print(f"[MuseTalk] Python: {sys.version}")
     print(f"[MuseTalk] Workspace: {WORKSPACE}")
     print(f"[MuseTalk] Model dir: {MODEL_DIR}")
+
+    # Check and download models if missing
+    try:
+        check_and_download_models()
+    except Exception as e:
+        print(f"[MuseTalk] Startup check_and_download_models failed: {e}")
 
     # Check CUDA
     try:
