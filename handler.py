@@ -85,20 +85,60 @@ def upload_to_s3(file_path, bucket_name, object_name):
         return None, f"S3 upload failed: {str(e)}"
 
 def check_and_download_models():
-    """Ensure all required models are downloaded and in the correct folder"""
-    required_file = WORKSPACE / "models" / "dwpose" / "dw-ll_ucoco_384.pth"
-    if not required_file.exists():
-        print(f"[MuseTalk] Models not found at {required_file.parent}. Downloading from HuggingFace...")
+    """Ensure all required models are downloaded and in the correct folder structure"""
+    # Create directories if they don't exist
+    for folder in ["musetalk", "musetalkV15", "dwpose", "face-parse-bisent", "sd-vae-ft-mse", "whisper"]:
+        os.makedirs(WORKSPACE / "models" / folder, exist_ok=True)
+
+    from huggingface_hub import hf_hub_download, snapshot_download
+
+    # 1. MuseTalk weights
+    musetalk_checkpoint = WORKSPACE / "models" / "musetalkV15" / "unet.pth"
+    if not musetalk_checkpoint.exists():
+        print("[MuseTalk] Downloading MuseTalk unet.pth...")
         try:
-            from huggingface_hub import snapshot_download
-            snapshot_download(
-                repo_id='TMElyralab/MuseTalk',
-                local_dir=str(WORKSPACE / "models"),
-                local_dir_use_symlinks=False
-            )
-            print("[MuseTalk] Download completed successfully!")
+            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="musetalkV15/unet.pth", local_dir=str(WORKSPACE / "models"))
+            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="musetalkV15/musetalk.json", local_dir=str(WORKSPACE / "models"))
         except Exception as e:
-            print(f"[MuseTalk] Error downloading models: {e}")
+            print(f"[MuseTalk] Error downloading MuseTalkV15: {e}")
+
+    # 2. DWPose weights
+    dwpose_checkpoint = WORKSPACE / "models" / "dwpose" / "dw-ll_ucoco_384.pth"
+    if not dwpose_checkpoint.exists():
+        print("[MuseTalk] Downloading DWPose weights...")
+        try:
+            hf_hub_download(repo_id="yzd-v/DWPose", filename="dw-ll_ucoco_384.pth", local_dir=str(WORKSPACE / "models" / "dwpose"))
+            hf_hub_download(repo_id="yzd-v/DWPose", filename="rtmdet_m_8xb64_coco-lvis.pth", local_dir=str(WORKSPACE / "models" / "dwpose"))
+        except Exception as e:
+            print(f"[MuseTalk] Error downloading DWPose: {e}")
+
+    # 3. Face Parsing weights
+    face_parse_checkpoint = WORKSPACE / "models" / "face-parse-bisent" / "79999_iter.pth"
+    if not face_parse_checkpoint.exists():
+        print("[MuseTalk] Downloading Face Parsing weights...")
+        try:
+            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="face-parse-bisent/79999_iter.pth", local_dir=str(WORKSPACE / "models"))
+            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="face-parse-bisent/resnet18-5c106cde.pth", local_dir=str(WORKSPACE / "models"))
+        except Exception as e:
+            print(f"[MuseTalk] Error downloading Face Parsing weights: {e}")
+
+    # 4. SD VAE weights
+    vae_checkpoint = WORKSPACE / "models" / "sd-vae-ft-mse" / "diffusion_pytorch_model.bin"
+    if not vae_checkpoint.exists():
+        print("[MuseTalk] Downloading SD VAE weights...")
+        try:
+            snapshot_download(repo_id="stabilityai/sd-vae-ft-mse", local_dir=str(WORKSPACE / "models" / "sd-vae-ft-mse"))
+        except Exception as e:
+            print(f"[MuseTalk] Error downloading SD VAE: {e}")
+
+    # 5. Whisper weights
+    whisper_checkpoint = WORKSPACE / "models" / "whisper" / "tiny.pt"
+    if not whisper_checkpoint.exists():
+        print("[MuseTalk] Downloading Whisper weights...")
+        try:
+            hf_hub_download(repo_id="TMElyralab/MuseTalk", filename="whisper/tiny.pt", local_dir=str(WORKSPACE / "models"))
+        except Exception as e:
+            print(f"[MuseTalk] Error downloading Whisper: {e}")
 
 def generate_video_musetalk(video_path, audio_path, output_path, bbox_shift=0, is_video=True):
     """
